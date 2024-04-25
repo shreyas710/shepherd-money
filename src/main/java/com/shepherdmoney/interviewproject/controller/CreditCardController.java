@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RestController
 public class CreditCardController {
 
-    // TODO: wire in CreditCard repository here (~1 line)
     @Autowired
     private CreditCardRepository creditCardRepository;
 
@@ -29,32 +28,36 @@ public class CreditCardController {
 
     @PostMapping("/credit-card")
     public ResponseEntity<Integer> addCreditCardToUser(@RequestBody AddCreditCardToUserPayload payload) {
-        // TODO: Create a credit card entity, and then associate that credit card with user with given userId
-        //       Return 200 OK with the credit card id if the user exists and credit card is successfully associated with the user
-        //       Return other appropriate response code for other exception cases
-        //       Do not worry about validating the card number, assume card number could be any arbitrary format and length
-        CreditCard c = new CreditCard();
-        User u = userRepository.findById(payload.getUserId()).orElse(null);
-        if (u == null) {
+        CreditCard checkExistingCard = creditCardRepository.findByNumber(payload.getCardNumber());
+        if (checkExistingCard != null && checkExistingCard.getUser().getId() == payload.getUserId()) {
+            // return 400 if credit card number already exists for the given user
+            System.out.println("The following card number already exists for given user");
             return ResponseEntity.badRequest().body(400);
         }
-        c.setUser(u);
-        c.setIssuanceBank(payload.getCardIssuanceBank());
-        c.setNumber(payload.getCardNumber());
-        creditCardRepository.save(c);
-        return ResponseEntity.ok(c.getId());
+        User user = userRepository.findById(payload.getUserId()).orElse(null);
+        if (user == null) {
+            // return 400 if user does not exist
+            System.out.println("The following user does not exist");
+            return ResponseEntity.badRequest().body(400);
+        }
+        CreditCard newCard = new CreditCard();
+        newCard.setUser(user);
+        newCard.setIssuanceBank(payload.getCardIssuanceBank());
+        newCard.setNumber(payload.getCardNumber());
+        creditCardRepository.save(newCard);
+        return ResponseEntity.ok(newCard.getId());
     }
 
     @GetMapping("/credit-card:all")
     public ResponseEntity<List<CreditCardView>> getAllCardOfUser(@RequestParam int userId) {
-        // TODO: return a list of all credit card associated with the given userId, using CreditCardView class
-        //       if the user has no credit card, return empty list, never return null
         List<CreditCardView> cards = new ArrayList<>();
-        User u = userRepository.findById(userId).orElse(null);
-        if (u == null) {
-            return ResponseEntity.badRequest().body(null);
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            // returning empty array list if user does not exist
+            System.out.println("The following user does not exist");
+            return ResponseEntity.badRequest().body(cards);
         }
-        creditCardRepository.findAllByUser(u).forEach(card -> {
+        creditCardRepository.findAllByUser(user).forEach(card -> {
             CreditCardView cv = new CreditCardView(card.getIssuanceBank(), card.getNumber());
             cards.add(cv);
         });
@@ -63,13 +66,13 @@ public class CreditCardController {
 
     @GetMapping("/credit-card:user-id")
     public ResponseEntity<Integer> getUserIdForCreditCard(@RequestParam String creditCardNumber) {
-        // TODO: Given a credit card number, efficiently find whether there is a user associated with the credit card
-        //       If so, return the user id in a 200 OK response. If no such user exists, return 400 Bad Request
-        CreditCard c = creditCardRepository.findByNumber(creditCardNumber);
-        if (c == null || c.getUser() == null) {
+        CreditCard card = creditCardRepository.findByNumber(creditCardNumber);
+        if (card == null || card.getUser() == null) {
+            // returning 400 if card does not exist or card exists but not associated with a user
+            System.out.println("Invalid card number");
             return ResponseEntity.badRequest().body(400);
         }
-        return ResponseEntity.ok(c.getUser().getId());
+        return ResponseEntity.ok(card.getUser().getId());
     }
 
     @PostMapping("/credit-card:update-balance")

@@ -15,8 +15,8 @@ public class UserController {
 
     @PutMapping("/user")
     public ResponseEntity<Integer> createUser(@RequestBody CreateUserPayload payload) {
-        User checkExisting = userRepository.findByEmail(payload.getEmail());
-        if (checkExisting != null) {
+        User checkExistingUser = userRepository.findByEmail(payload.getEmail());
+        if (checkExistingUser != null) {
             // return 400 error if user with the given email already exists
             System.out.println("User already exists");
             return ResponseEntity.badRequest().body(400);
