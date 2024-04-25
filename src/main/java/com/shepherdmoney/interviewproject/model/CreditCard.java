@@ -1,14 +1,12 @@
 package com.shepherdmoney.interviewproject.model;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -27,6 +25,9 @@ public class CreditCard {
 
     // TODO: Credit card's owner. For detailed hint, please see User class
     // Some field here <> owner;
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     // TODO: Credit card's balance history. It is a requirement that the dates in the balanceHistory 
     //       list must be in chronological order, with the most recent date appearing first in the list. 
@@ -47,4 +48,6 @@ public class CreditCard {
     //        4. Deletion of a balance should be fast
     //        5. It is possible that there are gaps in between dates (note the 04-13 and 04-16)
     //        6. In the condition that there are gaps, retrieval of "closest" balance date should also be fast. Aka, given 4-15, return 4-16 entry tuple
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "card", cascade = CascadeType.ALL)
+    private Set<BalanceHistory> balanceHistories;
 }
