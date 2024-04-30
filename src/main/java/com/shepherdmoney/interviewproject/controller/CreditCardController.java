@@ -1,7 +1,9 @@
 package com.shepherdmoney.interviewproject.controller;
 
+import com.shepherdmoney.interviewproject.model.BalanceHistory;
 import com.shepherdmoney.interviewproject.model.CreditCard;
 import com.shepherdmoney.interviewproject.model.User;
+import com.shepherdmoney.interviewproject.repository.BalanceHistoryRepository;
 import com.shepherdmoney.interviewproject.repository.CreditCardRepository;
 import com.shepherdmoney.interviewproject.repository.UserRepository;
 import com.shepherdmoney.interviewproject.vo.request.AddCreditCardToUserPayload;
@@ -11,8 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.util.*;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -25,6 +28,9 @@ public class CreditCardController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private BalanceHistoryRepository balanceHistoryRepository;
 
     @PostMapping("/credit-card")
     public ResponseEntity<Integer> addCreditCardToUser(@RequestBody AddCreditCardToUserPayload payload) {
@@ -88,8 +94,69 @@ public class CreditCardController {
 //        //      Return 200 OK if update is done and successful, 400 Bad Request if the given card number
 //        //        is not associated with a card.
 //
+        for (UpdateBalancePayload p : payload) {
+            CreditCard card = creditCardRepository.findByNumber(p.getCreditCardNumber());
+            if(card == null || card.getUser() == null) {
+                // returning 400 if card does not exist or card exists but not associated with a user
+                System.out.println("Invalid card number");
+                return ResponseEntity.badRequest().body(400);
+            }
 
-        return null;
+            List<BalanceHistory> balanceHistories = balanceHistoryRepository.findAllByCard(card);
+            Map<LocalDate, Double> balanceMap = new HashMap<>();
+            for (BalanceHistory bh : balanceHistories) {
+                balanceMap.put(bh.getDate(), bh.getBalance());
+            }
+
+            if(card.getBalanceHistory().size() == 0) {
+                // if balance history is empty, add the first balance
+                BalanceHistory bh = new BalanceHistory();
+                bh.setCard(card);
+                bh.setDate(p.getBalanceDate());
+                bh.setBalance(p.getBalanceAmount());
+                balanceMap.put(bh.getDate(), bh.getBalance());
+                balanceHistoryRepository.save(bh);
+                continue;
+            }
+
+            System.out.println(card.getBalanceHistory().size());
+
+            for (int i = 0; i < card.getBalanceHistory().size(); i++) {
+                LocalDate date = card.getBalanceHistory().toArray(new BalanceHistory[0])[i].getDate();
+                double balance = card.getBalanceHistory().toArray(new BalanceHistory[0])[i].getBalance();
+                if (balanceMap.containsKey(date)) {
+                    balanceMap.put(date, balance);
+                } else {
+                    LocalDate prevDate = date.minusDays(1);
+                    if (balanceMap.containsKey(prevDate)) {
+                        balanceMap.put(date, balance);
+                    } else {
+                        // if there are gaps between two balance dates, fill the empty date with the balance of the previous date
+                        balanceMap.put(date, balanceMap.get(prevDate));
+                    }
+                }
+            }
+            System.out.println(balanceMap);
+            
+            List<BalanceHistory> newBalanceHistories = new ArrayList<>();
+            for (Map.Entry<LocalDate, Double> entry : balanceMap.entrySet()) {
+                BalanceHistory bh = new BalanceHistory();
+                bh.setCard(card);
+                bh.setDate(entry.getKey());
+                bh.setBalance(entry.getValue());
+                newBalanceHistories.add(bh);
+            }
+            balanceHistoryRepository.saveAll(newBalanceHistories);
+
+            double diff = card.getBalanceHistory().toArray(new BalanceHistory[0])[0].getBalance() - balanceHistories.get(0).getBalance();
+            if (diff != 0) {
+                for (int i = 1; i < balanceHistories.size(); i++) {
+                    balanceHistories.get(i).setBalance(balanceHistories.get(i).getBalance() + diff);
+                }
+                balanceHistoryRepository.saveAll(balanceHistories);
+            }
+        }
+        return ResponseEntity.ok(200);
     }
     
 }
