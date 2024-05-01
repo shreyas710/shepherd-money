@@ -7,8 +7,11 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDate;
+
 
 @Repository("BalanceHistoryRepo")
 public interface BalanceHistoryRepository extends JpaRepository<BalanceHistory, Integer> {
     List<BalanceHistory> findAllByCard(CreditCard card);
+    BalanceHistory findByDate(LocalDate date);
 }

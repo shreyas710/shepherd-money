@@ -15,27 +15,39 @@ public class UserController {
 
     @PutMapping("/user")
     public ResponseEntity<Integer> createUser(@RequestBody CreateUserPayload payload) {
-        User checkExistingUser = userRepository.findByEmail(payload.getEmail());
-        if (checkExistingUser != null) {
-            // return 400 error if user with the given email already exists
-            System.out.println("User already exists");
-            return ResponseEntity.badRequest().body(400);
+        try {
+            User checkExistingUser = userRepository.findByEmail(payload.getEmail());
+            if (checkExistingUser != null) {
+                // return 400 error if user with the given email already exists
+                System.out.println("User already exists");
+                return ResponseEntity.badRequest().body(400);
+            }
+            User newUser = new User();
+            newUser.setName(payload.getName());
+            newUser.setEmail(payload.getEmail());
+            userRepository.save(newUser);
+            return ResponseEntity.ok(newUser.getId());
+        } catch(Exception e) {
+            // return 500 error if there is an exception
+            System.out.println("Error creating user: " + e);
+            return ResponseEntity.badRequest().body(500);
         }
-        User newUser = new User();
-        newUser.setName(payload.getName());
-        newUser.setEmail(payload.getEmail());
-        userRepository.save(newUser);
-        return ResponseEntity.ok(newUser.getId());
     }
 
     @DeleteMapping("/user")
     public ResponseEntity<String> deleteUser(@RequestParam int userId) {
-        User delUser = userRepository.findById(userId).orElse(null);
-        if(delUser != null) {
-            // deleting user automatically deletes all his credit cards because of the linking
-            userRepository.delete(delUser);
-            return ResponseEntity.ok("User deleted successfully");
+        try {
+            User delUser = userRepository.findById(userId).orElse(null);
+            if(delUser != null) {
+                // deleting user automatically deletes all his credit cards because of the linking
+                userRepository.delete(delUser);
+                return ResponseEntity.ok("User deleted successfully");
+            }
+            return ResponseEntity.badRequest().body("User does not exist");
+        } catch(Exception e) {
+            // return 500 error if there is an exception
+            System.out.println("Error deleting user: " + e);
+            return ResponseEntity.badRequest().body("Error deleting user");
         }
-        return ResponseEntity.badRequest().body("User does not exist");
     }
 }

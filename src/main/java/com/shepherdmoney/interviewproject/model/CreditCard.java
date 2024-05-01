@@ -23,8 +23,6 @@ public class CreditCard {
 
     private String number;
 
-    // TODO: Credit card's owner. For detailed hint, please see User class
-    // Some field here <> owner;
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
     private User user;
