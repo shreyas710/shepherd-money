@@ -10,14 +10,18 @@ import com.shepherdmoney.interviewproject.vo.request.AddCreditCardToUserPayload;
 import com.shepherdmoney.interviewproject.vo.request.UpdateBalancePayload;
 import com.shepherdmoney.interviewproject.vo.response.CreditCardView;
 
+import jakarta.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.*;
 
 @RestController
+@EnableTransactionManagement
 public class CreditCardController {
 
     @Autowired
@@ -111,7 +115,11 @@ public class CreditCardController {
     } 
 
     @PostMapping("/credit-card:update-balance")
+    @Transactional
     public ResponseEntity<Integer> postMethodName(@RequestBody UpdateBalancePayload[] payload) {
+
+        // this will be a transactional operation
+        
         try {
             Map<String, List<BalanceHistory>> currBalHistoryFromPayload = new HashMap<>();
             for (UpdateBalancePayload updateBalancePayload : payload) {
